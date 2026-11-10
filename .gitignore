@@ -1,0 +1,11 @@
+.DS_Store
+__pycache__/
+*.pyc
+
+# Made from your own game dump: never commit
+web/assets/
+web-dev/data/
+web-research/extracted/
+web-research/analysis/
+web-research/.venv/
+*.dylib

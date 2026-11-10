@@ -1,6 +1,6 @@
 # Tsukihime remake: web version
 
-The web version uses `app/`, `assets/` and `server.py`. In the source checkout, the build tools, tests, audit and longer notes are in the adjacent `web-dev` folder. Below, `tools/` and `tests/` refer to directories in `web-dev`.
+The web version is the `web` folder: `app/`, `assets/` and `server.py`. The build tools, tests, audit and longer notes are in `web-dev`, and the first size research and its tools in `web-research` (see [web-research/FINDINGS.md](web-research/FINDINGS.md)). Below, `app/`, `assets/` and `server.py` are in `web`, and `tools/`, `tests/`, `smoketest/` and `audit/` in `web-dev`.
 
 A rewrite of the game's engine in JavaScript and WebGL2 that runs the game's own scripts in the browser. The `assets/`
 directory is generated from a game dump.
@@ -50,7 +50,7 @@ web-research/.venv/bin/python -I web-dev/tools/build_effects.py "$PWD"
 
 This needs the Japanese port's prepared `data/tsuki/analysis/main.bin` and `data/tsuki/gen/main`.
 The exporter checks the image fingerprint before reading its tables. Motion, shake, and sway now run in the browser;
-see [ANIMATIONS.md](../web-dev/ANIMATIONS.md) for command coverage and remaining differences.
+see [ANIMATIONS.md](web-dev/ANIMATIONS.md) for command coverage and remaining differences.
 
 ## The first page
 
@@ -223,7 +223,7 @@ notice, and New Game goes straight to the story.
   screen with CG Gallery, Music Player, Flowchart, Movie, Ending List and Title. The CG and music tables are read from
   the executable; a picture unlocks when it is shown (or by STCG), a track when it is played, a movie when it is played.
   The Ending List (`app/js/endings.js`) shows an ending or bad end once its "Teach Me, Ciel-Sensei!" episode has
-  begun, and plays the episode again; see [ANIMATIONS.md](../web-dev/ANIMATIONS.md#endings-and-ciel-sensei).
+  begun, and plays the episode again; see [ANIMATIONS.md](web-dev/ANIMATIONS.md#endings-and-ciel-sensei).
 - `tools/build_flowchart.py`, `tools/native_flowchart.py`, `app/js/flowchart.js`, `app/js/flowchart-model.js`: the
   flowchart, from the game's own rows, links, titles, notes and thumbnails. Scenes appear once played; scenes that
   every path to a played scene must pass count as played too (for progress from saves or older read history).
@@ -233,7 +233,7 @@ notice, and New Game goes straight to the story.
 - `smoketest/`: runs every script at full speed and lists errors: `python3 web-dev/tools/dev_server.py 8770`, then open http://localhost:8770/smoketest.html
 
 Regression checks (Node.js, no packages needed): `node --test web-dev/tests/*.test.mjs`. What the parity audit in
-`audit/` found and what changed is in [audit/FIXES.md](../web-dev/audit/FIXES.md).
+`audit/` found and what changed is in [audit/FIXES.md](web-dev/audit/FIXES.md).
 
 ## Ciel-sensei and endings
 

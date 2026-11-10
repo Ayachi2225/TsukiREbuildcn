@@ -1,0 +1,11 @@
+{
+  "beforeDecode": {
+    "voiceDoneResolved": true,
+    "pendingNodeCount": 0,
+    "started": 0
+  },
+  "afterDecode": {
+    "nodeCount": 1,
+    "started": 1
+  }
+}
