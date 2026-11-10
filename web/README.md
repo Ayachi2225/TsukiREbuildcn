@@ -1,0 +1,243 @@
+# Tsukihime remake: web version
+
+The web version uses `app/`, `assets/` and `server.py`. In the source checkout, the build tools, tests, audit and longer notes are in the adjacent `web-dev` folder. Below, `tools/` and `tests/` refer to directories in `web-dev`.
+
+A rewrite of the game's engine in JavaScript and WebGL2 that runs the game's own scripts in the browser. The `assets/`
+directory is generated from a game dump.
+
+## Run it
+
+```bash
+python3 web/server.py 8765
+```
+
+Then open http://localhost:8765. It needs Python 3, with no packages, and the `web` folder: everything the game uses is in `web/assets/` (2.7 GB).
+Nothing else in the repository is read, nor the game's own files, so that folder can be moved by itself. The browser needs WebGL2, AVIF, Opus and AV1 video: Chrome and Firefox have them all.
+
+**It does not work in Safari.** The movies are AV1 video, which Safari plays only on Apple's newest hardware (it has no decoder of its own), and the game has not been tried there.
+
+## Making the assets again
+
+Only if `assets/` has to be rebuilt. From the repository root, with the dump in place, the patch in `mods/japan`, the packages in
+`web-research/.venv` and `ffmpeg` on the path, built with `libsvtav1` (the movies are encoded with it):
+
+```bash
+web-research/.venv/bin/python -I web-dev/tools/build_core.py "$PWD"
+web-research/.venv/bin/python -I web-dev/tools/build_images.py
+web-research/.venv/bin/python -I web-dev/tools/build_ui.py "$PWD"
+web-research/.venv/bin/python -I web-dev/tools/build_flowchart.py
+web-research/.venv/bin/python -I web-dev/tools/build_gallery.py "$PWD"
+web-research/.venv/bin/python -I web-dev/tools/build_system.py "$PWD"
+web-research/.venv/bin/python -I web-dev/tools/build_sounds.py "$PWD"
+web-research/.venv/bin/python -I web-dev/tools/convert_all.py "$PWD" --jobs 6
+python3 web-dev/tools/check_assets.py
+```
+
+`convert_all.py` makes what `tools/needed.py` lists: what the port can ask for, and nothing it makes for itself, so not the game's pre-blurred pictures. It is safe to stop and
+resume. `check_assets.py` says whether anything is missing.
+
+The core build also exports the original engine's motion tracks. To add them to an existing prepared web copy:
+
+```bash
+web-research/.venv/bin/python -I web-dev/tools/build_animations.py "$PWD"
+```
+
+The colour effect presets (`STEC`) come from the same image; to add them to an existing web copy:
+
+```bash
+web-research/.venv/bin/python -I web-dev/tools/build_effects.py "$PWD"
+```
+
+This needs the Japanese port's prepared `data/tsuki/analysis/main.bin` and `data/tsuki/gen/main`.
+The exporter checks the image fingerprint before reading its tables. Motion, shake, and sway now run in the browser;
+see [ANIMATIONS.md](../web-dev/ANIMATIONS.md) for command coverage and remaining differences.
+
+## The first page
+
+The first time the game is opened in a browser, it starts on a page that says what this project is and how it was made. Browsers play no sound until the page has been clicked, so its START button is that click, and the game opens with its sound on. It shows once; `http://localhost:8765/?welcome` opens it again. On later visits sound starts at the first click or key, as browsers require.
+
+## Opening a particular scene
+
+Add these to the address:
+
+| | |
+|---|---|
+| `/?script=00_02` | Opens that script by name (capitals matter) |
+| `/?script=89` | The same by its number, 0 to 548 |
+| `/?script=04_00_ARC04_4_1&pc=500` | Runs through to command 500, then plays normally |
+| `/?script=04_00_ARC04_3&label=LBL_008` | Starts at a label inside the script. Nothing before it has run, so the screen stays empty until the scene next draws a picture |
+| `&mute` | No sound at all, with any of these |
+| `/?welcome` | The first page again |
+
+Script names start with the day, then 00 for Arcueid's route or 01 for Ciel's. `00_00` to `00_02` are the prologue and `QA_01` to `QA_24` the Teach Me, Ciel-sensei episodes. All 549 are in `assets/scripts/index.json`. A scene opened this way starts with the story's flags empty, so one that depends on earlier choices can branch differently than in play. It also skips the first page, so sound begins at your first click.
+
+## Fonts
+
+Only SeuratPro and Inter are in this folder. The rest are looked for on the system, and the next in line is used where one is missing.
+
+| Font | Used for | Then |
+|---|---|---|
+| Georgia | The story, choices, the log, Yes / No questions | Times New Roman |
+| SeuratPro M | Speech balloons (`assets/fonts/`, the game's own) | Georgia |
+| Inter | Gallery lists, Music Player, the hints, Controls page (`app/fonts/`) | any sans-serif |
+| Helvetica | Flowchart cards | Arial |
+| Apple Chancery | Chapter names, the story's old-fashioned lettering | Lucida Calligraphy, Monotype Corsiva, URW Chancery L, TeX Gyre Chorus |
+| Hoefler Text | Day numbers beside chapter names | Palatino Linotype, Palatino, Book Antiqua, Georgia |
+| PT Sans Narrow | The words on the plates | Ubuntu Condensed, Arial Narrow, Segoe UI, Helvetica Neue, Arial |
+| Ubuntu Condensed | Chapters on save rows and the flowchart | PT Sans Narrow, Arial Narrow, Roboto Condensed, Helvetica |
+| Ubuntu | The day on a save row | Helvetica Neue, Segoe UI, the system font |
+| Eurostile | The Audio Track label | Microgramma, DIN Alternate, Bahnschrift, Inter |
+| System font | Scene names in the menus, short notices | |
+
+The game itself carries `ja/TT_TsukuMin-D.ttf`, `ja2/TT_TsukuGo-D.ttf`, `ja3/FOT-SeuratPro-M.otf`, `ja3/SeuratPro-M.otf` and `exfont_nx01.bffnt`.
+
+## Mouse and keys
+
+The interface is made for a mouse and a keyboard. The story itself (pictures, text, sound, movies) plays as the game
+plays it; the screens around it keep the game's art and are driven by one rule:
+
+- **The mouse.** What is under the pointer lights up, one click chooses it, a right click goes back, and the wheel
+  scrolls. On the story screen a click advances, a right click opens the system menu, the wheel up opens the log and
+  down advances, and a middle click hides the text (any click shows it again). The pointer goes out of sight when it
+  rests over the story. A click draws the game's touch ring. There is no Back button on the screens: a right click
+  (or Esc) is Back everywhere, and a button's caption shows only while the pointer is on it.
+- **The quick bar.** Move the mouse to the top of the picture. It is the game's own bar and buttons (previous scene,
+  previous message, auto, skip, next scene, Q.SAVE, Q.LOAD, voice) with LOG, HIDE, SAVE, LOAD, CONFIG, FULL and MENU
+  after them, cut from the same art. Pointing at a button shows what it does and its key. Any click sends the bar up
+  again. The two scene buttons and Q.LOAD ask first, starting on No.
+- **The keys.** One map for every screen, shown on the config's Controls page, where a click on a key (or Enter) and
+  then the new key changes it; Esc cancels, Backspace clears, and "Reset to defaults" puts them back. The defaults:
+
+| | |
+|---|---|
+| Advance text | Enter, Space |
+| Fast forward while held | Ctrl (everything, or only read text when Fast forward is "Read") |
+| Skip read text on / off | S |
+| Auto mode on / off | A |
+| Log | L, Page Up |
+| Previous message | R |
+| Hide text | H |
+| Replay voice | V |
+| Quick save, quick load | Q, W |
+| Return to previous scene, jump to next scene | P, N |
+| Quick bar by keys | Up (then Left / Right, Enter; Esc closes) |
+| System menu | Esc |
+| Full screen | F (Esc still opens the menu there, where the browser allows it; hold it to leave) |
+| Save, Load, Config | none until you give them one |
+
+In every menu: the arrows move, Enter or Space chooses, Esc or Backspace goes back, Tab changes the config's page
+(Shift + Tab the other way), Page Up / Page Down scroll, Home / End go to the first / last. The bar along the bottom of
+each screen says what is there.
+
+Choices start with nothing selected: the pointer lights a row and a click takes it; Up / Down or the wheel pick a row
+(Left / Right the first or last) and Enter takes it. Rows the story has not opened yet are shown but cannot be picked.
+The story's own yes / no questions also start on neither: point and click, or Up for No and Down for Yes.
+
+The log shows every page so far, the one on screen too, one under another as the text window drew them, opened at the
+newest. The wheel, the scroll bar and Page Up / Page Down scroll it, and scrolling on past the end closes it. A click
+on a line (or Up / Down and Enter) asks "Quick Jump?" (starting on No) and goes back to that line; a line with a voice
+has a speaker mark at its left, and a click on it (or V on the cursor's line) plays the voice again.
+
+In the config a click on a slider's bar puts the knob there, and it can be dragged; minus and plus step 1 (50 for the
+auto mode waits) and repeat when held; holding Enter on a slider, Left / Right step it; the wheel or a drag scrolls
+the page. In the CG viewer a click or Left / Right change the picture, Enter toggles fill and fit, Up / Down, + / - or
+the wheel zoom, dragging moves the picture and Home resets it. In the Music Player a click on the position bar moves
+the track there.
+
+The chapter in the system menu's header, on each save row and down the flowchart's left side is written out as text, one
+line each, in the look of the game's pictures of them (the translated pictures had to break long names over two small
+lines to fit the game's cells); the flowchart's are larger than the pictures were.
+
+The system menu's header (and Save, Load and Config under it) names the music playing: "Audio Track", and under it
+a turning disc and the title, to the left of the scene name. From the title the gallery opens on the game's own
+one-second fade, without the 0.35 s stop the game makes after it.
+
+A controller still works as a second way to play: A advance and choose, B cancel or stop skipping, Y system menu,
+X log, up the quick bar, down advance, R skip, L auto (the config's page after / before in the menus), ZR fast forward
+while held, ZL rewind. The right stick moves the cursor in the menus as the D-pad does and the left stick scrolls.
+
+## Skipping and rewinding
+
+Skipping waits at text you have not read when Fast forward is "Read" (the default) and goes on by itself at read text;
+on "Full" it passes everything. Choices do not turn it off; the Skip key or button does (the pad's B too), and so does
+opening the system menu.
+
+Rewinding (and the log's Quick Jump) goes back up to 800 points in the current session; loading a save starts the
+trail again. What has been read is kept in the browser from now on, so text read before this existed counts as
+unread. Quick load asks first, as the game does, and shows the quick save's picture.
+
+## Movies
+
+The movies are MP4 files with AV1 video (SVT-AV1 at constant quality 24, from the game's H.264) and the game's own AAC sound, copied without re-encoding. Every frame keeps its place and time. A movie that AV1 would not make at least a tenth smaller is left as the game's own file (none is: all 45 are AV1, 0.42 GB where the game's are 1.76 GB). No movie may be over 95 MB, so that no file in `web/` is too large for a host such as GitHub; one that would be is made at a coarser quality until it fits, which `ed03_ciel` and `op2_ciel` needed. The largest file is now `op2_ciel.mp4`, 82 MB.
+
+The two opening songs cannot be passed the first time they play; after that a click or key asks "Skip opening animation?",
+in the gallery too. The end credits ask "Skip Outro?" every time. The prologue asks "Skip intro video?" on its first showing
+and passes without asking after that. Each question starts on No and holds the movie while it is up. The system menu does not open
+over a movie.
+
+## Saves
+
+100 save slots, a quick save, and 39 automatic saves. As in the game a save holds the latest checkpoint (a scene's
+start, a choice, or the first line of a page), so loading shows that page from its first line. The automatic save is
+made when you return to the title from the system menu (which asks nothing outside a gallery replay), and here also
+when the page is closed during a story. The save screen lists all 100 slots by number, starting on the lowest empty
+one. The load screen lists everything there is to load, newest first: the slots in use, the quick save and the
+automatic saves, each named. Continue loads the save written last.
+In the story's Save and Load, Left gives the menu's column the cursor and Right gives it back to the row you were on.
+Some chapters ask "Save Progress?"; Yes opens the save screen and the story goes on when it closes.
+
+Saves and progress are kept in this browser, so clearing its site data removes them, and another browser starts empty. A save
+of an ordinary scene is about 13 KB; the browser allows about 5 MB in all.
+
+On the very first start (before the prologue has played) the game opens straight on the opening movie, which a try to
+pass asks about first ("Skip intro video?"); the title, its cautions and the story follow. After that it starts with the logos and the
+notice, and New Game goes straight to the story.
+
+## Files
+
+- `tools/build_core.py`: scripts, dialogue and tables
+- `tools/build_images.py`: how large each image needs storing
+- `tools/convert.py`, `tools/convert_all.py`: images to AVIF, voices and music to Ogg Opus without re-encoding, sound effects to Opus, the movies' pictures to AV1 with their sound copied, the balloon font copied
+- `tools/needed.py`, `tools/check_assets.py`: what the game can ask for, and whether it is all there
+- `server.py`: static files with byte ranges, standard library only
+- `app/js/vm.js`: script commands
+- `tools/build_animations.py`, `app/js/animation.js`: the game's motion tracks, interpolation and animation clock
+- `tools/build_effects.py`: the game's colour effect presets, drawn by the layer shader in `app/js/renderer.js`
+- `app/js/transform.js`: where a layer goes: parents, pivots, panel clips and links
+- `app/js/screenfx.js`: the RGB split, speed lines and film grain
+- `app/js/effects.js`: screen and layer shake, ambient sway and text shake
+- `app/js/random.js`: the game's `rand()`, which a sway and the speed lines draw from
+- `app/js/renderer.js`: layers, blur, blend modes, crossfades
+- `tools/build_ui.py`: the game's interface art (and the film grain static; `build_ui.py "$PWD" NOISE_PARTS` adds just that; `PARTS`, the start-up notice and cautions from `parts.hed`, likewise)
+- `app/js/ui.js`: the game's screens, drawn with that art
+- `app/js/welcome.js`: the first visit's page and its text
+- `app/js/keys.js`: the keyboard map, shown and changed on the config's Controls page
+- `app/js/chapters.js`: the chapters' days and names, as text
+- `app/js/touchfx.js`: the ring drawn where the screen is clicked
+- `app/js/reflow.js`: takes out the English patch's forced line breaks, so the text box wraps the lines itself
+- `tools/build_sounds.py`: the interface's own sounds (`assets/sys`)
+- `tools/decode_save.py`: reads a save of the original game and prints its progress as the web version keeps it
+- `app/js/uifx.js`: what moves on them, timed as the original: the title's fade, logo, glow, dust, background and
+  music by progress, the cautions, and the system menu's fade, background bands, sparkles and cursor
+- `tools/build_gallery.py`, `app/js/gallery.js`, `app/js/unlocks.js`: the title's GALLERY, as the game has it: one
+  screen with CG Gallery, Music Player, Flowchart, Movie, Ending List and Title. The CG and music tables are read from
+  the executable; a picture unlocks when it is shown (or by STCG), a track when it is played, a movie when it is played.
+  The Ending List (`app/js/endings.js`) shows an ending or bad end once its "Teach Me, Ciel-Sensei!" episode has
+  begun, and plays the episode again; see [ANIMATIONS.md](../web-dev/ANIMATIONS.md#endings-and-ciel-sensei).
+- `tools/build_flowchart.py`, `tools/native_flowchart.py`, `app/js/flowchart.js`, `app/js/flowchart-model.js`: the
+  flowchart, from the game's own rows, links, titles, notes and thumbnails. Scenes appear once played; scenes that
+  every path to a played scene must pass count as played too (for progress from saves or older read history).
+- `tools/build_system.py`: tables for the sound page's character rows, sound effect and music loop points, the text
+  window's balloon styles, the help bars and the system questions' wording (`assets/system.json`)
+- `app/js/textbox.js`, `audio.js`, `main.js`: text, sound, input and settings
+- `smoketest/`: runs every script at full speed and lists errors: `python3 web-dev/tools/dev_server.py 8770`, then open http://localhost:8770/smoketest.html
+
+Regression checks (Node.js, no packages needed): `node --test web-dev/tests/*.test.mjs`. What the parity audit in
+`audit/` found and what changed is in [audit/FIXES.md](../web-dev/audit/FIXES.md).
+
+## Ciel-sensei and endings
+
+After a bad end the game offers its "Teach Me, Ciel-Sensei!" episode: a card, then "Enter hint corner (No. n)?".
+Yes plays the episode and then returns to the title; No returns to the title at once. The Ending List in the gallery
+lists the episodes begun, and endings reached before this version could play them are counted once from the scenes
+completed and text read. Rebuild `gallery.json` with `build_gallery.py` to get the list.

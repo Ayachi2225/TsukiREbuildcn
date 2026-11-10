@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Tsukihime remake (local)</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- Colour multipliers the interface draws with (0xb03e0): the choice lens flare is (1, 0.75, 1). -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><filter id="tint-flare" color-interpolation-filters="sRGB"><feColorMatrix type="matrix" values="1 0 0 0 0  0 .75 0 0 0  0 0 1 0 0  0 0 0 1 0"/></filter></svg>
+<div id="stage">
+  <canvas id="gl" width="1920" height="1080"></canvas>
+  <video id="movie" playsinline></video>
+  <div id="panel"></div>
+  <div id="text"></div>
+  <div id="choices"></div>
+  <div id="click-mark"></div>
+  <div id="note"></div>
+  <div id="popup"></div>
+  <div id="mode-skip"></div>
+  <div id="mode-back"></div>
+  <div id="mode-auto"></div>
+  <div id="ui"></div>
+  <div id="sysui"></div>
+  <div id="toast"></div>
+  <canvas id="touchfx" width="1920" height="1080"></canvas>
+</div>
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
