@@ -9,6 +9,7 @@ import { sprite, quickBarArt, panelBack } from "./ui.js";
 import { TOUCH } from "./touch.js";
 import { ButtonState, pressPulse } from "./uifx.js";
 import { SECTIONS, TOUCH_INTRO, blockEl } from "./welcome.js";
+import { LANG, setLang, t, uiUrl } from "./lang.js";
 
 export const GITHUB = "https://github.com/waifwu/TsukiREbuild";
 // The downloads: the whole game as an app that needs no connection (web-dev/android, web-dev/desktop), with the size each system shows for its file.
@@ -33,6 +34,8 @@ export const TABS = [
   { plate: "ABOUT", sections: SECTIONS.map(({ head, blocks }) => ({ head, blocks })) },
   { plate: "GITHUB", sections: [{ head: "The source, on GitHub", blocks: [
     "Everything this was made with is in one repository: the engine rewritten in JavaScript and WebGL2, the tools that turned the game's files into what this page plays, the tests, and the notes on how each part was checked against the game itself.",
+    // this fork's own repository, where the Chinese pack is: on the Chinese page only (the English page stays the original's)
+    ...(LANG === "zh" ? [["link", "This fork: github.com/Ayachi2225/TsukiREbuildcn", "https://github.com/Ayachi2225/TsukiREbuildcn"]] : []),
     ["rows", [
       ["web/app", "The game: its engine, its interface and its styles."],
       ["web/server.py", "Plays it on your own computer, with nothing to install: python3 web/server.py, then open localhost:8765."],
@@ -81,6 +84,7 @@ export const TABS = [
     ] },
   ] },
   { plate: "PLAY ONLINE", sections: [{ head: "Play here, in the browser", blocks: [
+    ["lang"],
     ["gpu"],
     "Nothing to install. It runs in Chrome or Firefox, on a computer, a phone or a tablet. Not in Safari, which plays the AV1 movies only on Apple's newest hardware.",
     "The game's files arrive as you play: the first screens load while this page is open, and the rest follow. Saves, settings and progress are kept in this browser; clearing the site's data removes them.",
@@ -122,6 +126,17 @@ export const NONE_LINE = "An unofficial fan rebuild of the Tsukihime remake. Cho
 
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
 
+// The page's words through the pack's small-string table (lang.js t): a paragraph, heading, note, block, row or section, with
+// addresses, file names and font stacks left as they stand (they have no entry in the table).
+function words(v) {
+  if (typeof v === "string") return t(v);
+  if (Array.isArray(v)) {
+    if (v[0] === "link") return [v[0], t(v[1]), v[2], v[3]];
+    return v.map(words);
+  }
+  return v;
+}
+
 // Resolves once the game has been started from PLAY ONLINE and the page has gone.
 // started: called within the click or key that starts the game, while the browser still counts it as the player's (main.js asks for full screen there).
 export async function openHome(ui, { started = null } = {}) {
@@ -134,8 +149,9 @@ export async function openHome(ui, { started = null } = {}) {
   const U = TOUCH.homeUpright, ux0 = Math.round((U.w - (pitch * (U.cols - 1) + shown)) / 2);
   const upright = () => document.documentElement.classList.contains("upright");
   const spot = (i) => (T && upright() ? [ux0 + (i % U.cols) * pitch, y + Math.floor(i / U.cols) * U.rowPitch] : [x0 + i * pitch, y]);
-  const sheet = await Promise.all([quickBarArt(TABS.map((t) => ({ label: t.plate })), P),
-    ...ART.map((a) => { const i = new Image(); i.src = `/assets/ui/${a}.webp`; return i.decode().catch(() => {}); })]).then(([s]) => s);
+  // the plates keep the game's own four words in every language: they are the page's names, and the art is the game's
+  const sheet = await Promise.all([quickBarArt(TABS.map((def) => ({ label: def.plate, raw: true })), P),
+    ...ART.map((a) => { const i = new Image(); i.src = uiUrl(a); return i.decode().catch(() => {}); })]).then(([s]) => s);
   return new Promise((done) => {
     black.remove();
     page.classList.add("hm-page");
@@ -162,29 +178,50 @@ export async function openHome(ui, { started = null } = {}) {
     const accel = T ? "on" : glAccel();   // ("on" by touch: the notice is not shown there)
     let tab = -1, shownAt = 0, leaving = false, prompt = null, pulse = { alpha: 0, up: true };
     const block = (b) => {
+      // The language the game is read in, chosen before it starts: the same setting the config's Controls page has, and
+      // the same page again after the reload, on this page (lang.js setLang; the address's tab=play reopens it).
+      if (b[0] === "lang") {
+        const box = el("div", "hm-lang");
+        box.append(el("span", "hm-lang-name", t("Language")));
+        for (const [code, label] of [["en", "English"], ["zh", "中文"]]) {
+          const btn = el("button", "hm-lang-btn", label);
+          btn.type = "button";
+          btn.classList.toggle("on", LANG === code);
+          btn.setAttribute("aria-pressed", String(LANG === code));
+          btn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            if (LANG === code) return;
+            ui.audio.start();
+            ui.sound(1);
+            setLang(code, { tab: "play" });
+          });
+          box.append(btn);
+        }
+        return box;
+      }
       if (b[0] === "press") {
         prompt = el("button", "hm-press");
-        prompt.setAttribute("aria-label", "Press any button to start");
+        prompt.setAttribute("aria-label", t("Press any button to start"));
         prompt.style.opacity = "0";
         prompt.addEventListener("click", (e) => { e.stopPropagation(); start(); });
         return prompt;
       }
       if (b[0] === "gpu") {
         const box = el("div", "hm-notice");
-        box.append(el("h3", "", GPU_NOTICE.head));
-        if (accel === "off") box.append(el("p", "hm-notice-off", GPU_NOTICE.off));
-        box.append(blockEl(["rows", GPU_NOTICE.rows]));
+        box.append(el("h3", "", t(GPU_NOTICE.head)));
+        if (accel === "off") box.append(el("p", "hm-notice-off", t(GPU_NOTICE.off)));
+        box.append(blockEl(words(["rows", GPU_NOTICE.rows])));
         return box;
       }
       if (b[0] === "link") {
-        const a = el("a", "hm-link", b[1]);
+        const a = el("a", "hm-link", t(b[1]));
         a.href = b[2];
         a.rel = "noopener";
         if (b[3]) a.download = b[3]; else a.target = "_blank";
         a.addEventListener("click", (e) => { e.stopPropagation(); ui.audio.start(); ui.sound(1); });
         return a;
       }
-      const e = blockEl(b);
+      const e = blockEl(words(b));
       if (b[0] === "facts" && b[1].length === 3) e.classList.add("hm-three");   // (three figures stay in one row, even upright)
       if (b[0] === "rows" && tab !== ABOUT) e.classList.add("hm-rows");   // (names this short need no 500 px column; About keeps the first page's)
       return e;
@@ -195,7 +232,7 @@ export async function openHome(ui, { started = null } = {}) {
       prompt = null;
       pulse = { alpha: 0, up: true };
       if (k === NONE) {
-        inner.replaceChildren(el("div", "wl-logo hm-logo"), el("p", "wl-note hm-lead", NONE_LINE));
+        inner.replaceChildren(el("div", "wl-logo hm-logo"), el("p", "wl-note hm-lead", t(NONE_LINE)));
         inner.style.opacity = "0";
         shownAt = 0;
         list.scrollTop = 0;
@@ -206,8 +243,8 @@ export async function openHome(ui, { started = null } = {}) {
         // (on a touch device the PLAY ONLINE page also says, under its prompt, how the game is played by touch: there are no hints to find by resting a
         // pointer)
         const kept = s.blocks.filter((b) => b[0] !== "gpu" || accel !== "on");
-        const blocks = T && k === PLAY ? [...kept, ...TOUCH_INTRO] : kept;
-        part.append(el("h2", "", s.head), ...blocks.map(block));
+        const blocks = T && k === PLAY ? [...kept, ...TOUCH_INTRO.map(words)] : kept;
+        part.append(el("h2", "", t(s.head)), ...blocks.map(block));
         return part;
       }));
       inner.style.opacity = "0";
@@ -231,10 +268,11 @@ export async function openHome(ui, { started = null } = {}) {
       plates[PLAY].st.pressFor(10);
       ui.after(10, leave);
     }
-    // On PLAY ONLINE a click anywhere on its page is the button too; a drag that scrolls it is not a click.
-    list.addEventListener("click", (e) => { if (tab === PLAY && !e.target.closest("a")) start(); });
-    const plates = TABS.map((t, i) => {
-      const b = el("button", "qbtn r1", t.plate);   // the word, where the art cannot be made
+    // On PLAY ONLINE a click anywhere on its page is the button too; a drag that scrolls it is not a click, and the
+    // language's buttons are their own presses.
+    list.addEventListener("click", (e) => { if (tab === PLAY && !e.target.closest("a") && !e.target.closest(".hm-lang")) start(); });
+    const plates = TABS.map((def, i) => {
+      const b = el("button", "qbtn r1", def.plate);   // the word, where the art cannot be made (untranslated, as on the art)
       b.style.cssText = `left:${spot(i)[0]}px;top:${spot(i)[1]}px;width:${P.w}px;height:${P.h}px;`;
       const lit = el("div", "sp fx-add");
       lit.style.cssText = `left:0;top:0;width:${P.w}px;height:${P.h}px;opacity:0;`;
@@ -258,6 +296,8 @@ export async function openHome(ui, { started = null } = {}) {
     });
     show(NONE);
     ui.sel = NONE;      // no plate lit: the keys' cursor comes in with the first arrow, Tab or pointer
+    // (a language chosen on PLAY ONLINE comes back to its page: lang.js setLang keeps tab=play)
+    if (new URLSearchParams(location.search).get("tab") === "play") { show(PLAY); ui.select(PLAY); }
 
     ui.keyFn = (e) => {
       const k = e.key;

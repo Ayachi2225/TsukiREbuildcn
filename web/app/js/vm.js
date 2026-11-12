@@ -9,6 +9,7 @@ import { blurName, pivotOf, sizeClass, wrapRotation } from "./transform.js";
 import { splitSample, startLines, startSplit, stopLines, stopSplit } from "./screenfx.js";
 import { reflow, wrapContext, choiceText } from "./reflow.js";
 import { colourMarks, plain, SOFT } from "./textbox.js";
+import { prepare as prepareLang, systemOverlayUrl, textUrl } from "./lang.js";
 
 function num(s) {
   if (s === undefined || s === "") return undefined;
@@ -250,10 +251,33 @@ export class VM {
     this.ringGate = false;    // 0x146e644: after a message with @n no records are made until the next MSG
   }
 
+  // The English system tables with a language pack's messages and save-slot scene names laid over them (lang.js). The
+  // tables are otherwise the game's own: sounds, windows, the config's buttons, pivots and the rest stay as built.
+  async languageSystem() {
+    const r = await fetch("/assets/system.json");
+    if (!r.ok) return null;
+    const data = await r.json();
+    const over = systemOverlayUrl();
+    if (over) {
+      try {
+        const o = await fetch(over);
+        if (o.ok) {
+          const d = await o.json();
+          Object.assign(data.messages ||= {}, d.messages || {});
+          for (const [i, s] of Object.entries(d.saves?.sceneNames || {})) data.saves.sceneNames[i] = s;
+        }
+      } catch { /* the pack's tables are optional */ }
+    }
+    return { ok: true, json: async () => data };
+  }
+
   async init() {
+    await prepareLang();   // a language pack's index first: it decides where the text and the pictures come from
     // The tables are asked for together, and read below in their old order: nothing can start before the last of them is in.
-    const asked = Object.fromEntries(["scripts/index", "text", "audio_tables", "images", "effects", "system", "animations", "gallery", "flowchart"]
+    const asked = Object.fromEntries(["scripts/index", "audio_tables", "images", "effects", "animations", "gallery", "flowchart"]
       .map((n) => [n, fetch(`/assets/${n}.json`)]));
+    asked.text = fetch(textUrl());
+    asked.system = this.languageSystem();
     for (const p of Object.values(asked)) p.catch(() => {});   // each is awaited where it is read
     this.index = await (await asked["scripts/index"]).json();
     this.lines = await (await asked.text).json();

@@ -323,7 +323,7 @@ test("The menu's header names the music playing, left of the scene name and neve
   assert.deepEqual([NOTE_LABEL.cap, NOTE_LABEL.width, NOTE_LABEL.base, NOTE_LABEL.stem, NOTE_LABEL.word], [13, 43, 26, 2, "Note."]);
   const src = source("js/ui.js");
   assert.match(src, /label\.el\.style\.left = `\$\{right - N\.inset - label\.width \+ label\.pad\}px`;/);
-  assert.match(src, /const size = \(T\.cap \/ \(probe\.measureText\("N"\)\.actualBoundingBoxAscent \|\| 72\)\) \* 100;/);
+  assert.match(src, /const size = cjk \? T\.cap \/ 0\.82 : \(T\.cap \/ \(probe\.measureText\("N"\)\.actualBoundingBoxAscent \|\| 72\)\) \* 100;/);
   const css = source("style.css");
   assert.match(css, /\.np-title \{ flex: 0 1 auto; min-width: 0; overflow: hidden; white-space: nowrap; text-overflow: ellipsis;/, "a long title is cut, not run on");
   assert.match(css, /\.np-turn \{ transform: scale\(1\.3\); animation: npturn 2s linear infinite; \}/);

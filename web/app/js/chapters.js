@@ -3,6 +3,8 @@
 // each English name into the Japanese picture's cell, on two lines where it was long. The port writes them out instead,
 // on one line; these lists give what each cell of the two sheets says, read off the patched pictures.
 
+import { chapterName } from "./lang.js";
+
 // A chapter's day (null: none shown) by its name; "Epilogue." is struck through in both sheets.
 const DAY = {
   "Prologue": null, "Glass Moon": 0, "Morning of Homecoming I": 1, "Day that Wasn't": 2, "Inversion Impulse": 3, "Infernal River of Blood I": 4,
@@ -31,7 +33,7 @@ const FLOW_SHEET = [
   ["Scarlet Moon of Crimson II", "Night of Ill-Omen", "Vermillion Vestiges II", "The Moon's Surface", "Mirage", "Stone of Eternity", "Moon Princess",
     "Rainbow in the Night", "Daylight Blue"],
 ];
-const chapter = (name) => (name === undefined ? null : { day: DAY[name] ?? null, name, struck: STRUCK.has(name) });
+const chapter = (name) => (name === undefined ? null : { day: DAY[name] ?? null, name: chapterName(name), struck: STRUCK.has(name) });
 
 // The chapter a cell of the system menu's sheet shows; cell: [x0, y0, x1, y1] (system.json saves.phaseCells). Null for
 // the table's empty entries.

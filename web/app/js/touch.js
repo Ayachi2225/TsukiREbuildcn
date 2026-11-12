@@ -8,6 +8,7 @@
 //   portrait      a screen asks for the device to be turned, and the game is held under it as under a hidden tab
 // The screens' own parts (larger plates, wider rows, the two-tap rule of choices and the flowchart) are in ui.js,
 // gallery.js, flowchart.js and home.js, each behind ui.touch, with their measures here (TOUCH).
+import { uiUrl } from "./lang.js";
 
 export const TOUCH = {
   // touch-first: the first pointer is coarse and cannot hover. A laptop with a touch screen has a fine first pointer, a
@@ -209,7 +210,7 @@ export function installTouch({ win = window, doc = document } = {}) {
   const touch = { on: true, held: false, ui: null, vm: null, audio: null, act: null };
   // the art only a touch device draws, read now: the rotate screen has it the moment the device is turned
   for (const a of ["DISP_PARTS_JA/back_btn", "DISP_PARTS_JA/voice_icon", "DISP_PARTS_JA/menuBG01_upscale", "DISP_PARTS_JA/mode_ring_1", "DIALOG_PARTS_JA/dialog_win", "TITLE_PARTS_JA/title_titlelog"]) {
-    if (win.Image) new win.Image().src = `${ART}/${a}.webp`;
+    if (win.Image) new win.Image().src = uiUrl(a);
   }
   const gate = new FrameGate(win);
   const now = () => win.performance.now();
@@ -416,7 +417,7 @@ export function installTouch({ win = window, doc = document } = {}) {
     const B = T.back, back = doc.createElement("button");
     back.id = "touch-back";
     back.setAttribute("aria-label", "Back");
-    back.style.cssText = `left:${B.x}px;top:${B.y}px;width:${B.w}px;height:${B.h}px;background-image:url("${ART}/DISP_PARTS_JA/back_btn.webp");`;
+    back.style.cssText = `left:${B.x}px;top:${B.y}px;width:${B.w}px;height:${B.h}px;background-image:url("${uiUrl("DISP_PARTS_JA/back_btn")}");`;
     const cell = (i) => { back.style.backgroundPosition = `${-B.cells[i][0]}px ${-B.cells[i][1]}px`; };
     cell(0);
     back.addEventListener("pointerdown", () => cell(1));

@@ -6,6 +6,7 @@ import { chapterLine, flowChapter } from "./chapters.js";
 import { DragFlick, FLOW_SCROLL_TIME, PadRepeat, STICK_DEAD, layoutChart, moveCursor, reselect, scrollFor, stickTarget, titleSize } from "./flowchart-model.js";
 import { EASE, MenuBgFade, Tween, fadeIn, fadeOut, wheelPixels } from "./uifx.js";
 import { GuideFx, REPLAY_MENU_BG, cgCursorLight, fadeMusicOut, scrollBar } from "./gallery.js";
+import { flowText, imageUrl, uiUrl } from "./lang.js";
 
 const PACK = "MENU_PARTS_JA";
 
@@ -18,7 +19,7 @@ function fitTitle(el, text) {
   titleRuler.font = TITLE_FONT;
   el.style.fontSize = `${titleSize(titleRuler.measureText(text).width)}px`;
 }
-const url = (name) => `/assets/ui/${PACK}/${name}.webp`;
+const url = (name) => uiUrl(`${PACK}/${name}`);
 const element = (tag, cls, text) => {
   const e = document.createElement(tag);
   e.className = cls;
@@ -174,10 +175,13 @@ export async function openFlowchart(ui, vm, jump, keep = null, opts = {}) {
     if (!p || p.preview < 0 || !p.previewName) return;
     const image = place(element("img", "fc-preview-image"), 1380, 120, 432, 244);
     image.alt = ""; image.decoding = "async"; image.style.zIndex = "1";
-    image.src = `/assets/img/${encodeURIComponent(p.previewName)}.avif`;
-    const title = place(element("div", "fc-preview-title", p.title.replace(/\^/g, "\n")), 1392, 404, 400, 48);
-    fitTitle(title, p.title);
-    const note = place(element("div", "fc-preview-note", reflowNote(p.note)), 1392, 452, 400, 200);
+    image.src = imageUrl(p.previewName);
+    const titleText = flowText(p.titleId, p.title);
+    const title = place(element("div", "fc-preview-title", titleText.replace(/\^/g, "\n")), 1392, 404, 400, 48);
+    fitTitle(title, titleText);
+    // a pack's note is one piece of running text: the pack's own row marks (^) come out, the box wraps it
+    const packNote = flowText(p.noteId);
+    const note = place(element("div", "fc-preview-note", packNote != null ? packNote.replace(/\^/g, "") : reflowNote(p.note)), 1392, 452, 400, 200);
     title.style.opacity = note.style.opacity = quick ? "1" : "0";
     panel.append(image, title, note);
     if (!quick) fades.push({ els: [title, note], text: true, tw: new Tween(0, 1, PREVIEW_FADE, EASE.quad.in) });
@@ -259,7 +263,7 @@ export async function openFlowchart(ui, vm, jump, keep = null, opts = {}) {
     };
     if (!p.reg) { map.append(look(place(element("div", "fc-node"), p.x, p.y, 104, 64))); continue; }
     const b = look(place(element("button", "fc-node" + (p.node === "thumb" ? " read" : " unread")), p.x, p.y, 104, 64));
-    b.setAttribute("aria-label", `${p.title}${p.node === "thumb" ? "" : " (not read yet)"}`);
+    b.setAttribute("aria-label", `${flowText(p.titleId, p.title)}${p.node === "thumb" ? "" : " (not read yet)"}`);
     b.setAttribute("aria-disabled", p.jumpable ? "false" : "true");
     b.dataset.flag = p.flag;
     // (a touch device: a first tap shows the scene at the right, a tap on the scene shown opens it; ui.add's twoTap)

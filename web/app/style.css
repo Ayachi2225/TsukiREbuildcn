@@ -1,4 +1,4 @@
-:root { color-scheme: dark; --story-font: Georgia, "Times New Roman", "Gelasio Bundled", serif; --story-size: 42px; --flow-font: Helvetica, Arial, "Arimo Bundled", sans-serif; --gallery-font: Inter, sans-serif; }
+:root { color-scheme: dark; --story-font: Georgia, "Times New Roman", "Gelasio Bundled", serif; --story-size: 42px; --story-line: 77.5px; --flow-font: Helvetica, Arial, "Arimo Bundled", sans-serif; --gallery-font: Inter, sans-serif; }
 /* Backups shipped with the page (fonts/, free licences beside them): each stack asks for the system's own fonts first, as it always did, and comes
    to one of these only where none of those is installed, before the browser's generic face. Their names are their own, so they never stand in for an
    installed font of the same design. Latin, accents and punctuation only: Japanese and symbols come from the system, which always has them.
@@ -24,7 +24,7 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 #movie-cover { position: absolute; inset: 0; width: 1920px; height: 1080px; display: none; pointer-events: none; }
 #panel { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: url("/assets/ui/DISP_PARTS_JA/txtwindow01-1920.webp") 0 0 / 100% 100% no-repeat; }
 /* The row pitch is the game's, measured on a native page (rows 77.5 px apart: 0x39180 reads the patched cell layout), and the box's top keeps the first row where it was. */
-#text, .logpage { position: absolute; left: 265px; top: 146px; width: 1390px; bottom: 0; font-family: var(--story-font); font-size: var(--story-size); font-weight: 400; line-height: 77.5px; white-space: pre-wrap; pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,.85), 0 0 6px rgba(0,0,0,.45); }
+#text, .logpage { position: absolute; left: 265px; top: 146px; width: 1390px; bottom: 0; font-family: var(--story-font); font-size: var(--story-size); font-weight: 400; line-height: var(--story-line); white-space: pre-wrap; pointer-events: none; text-shadow: 0 1px 3px rgba(0,0,0,.85), 0 0 6px rgba(0,0,0,.45); }
 #text { opacity: 0; }
 /* Balloon text (the Q&A corners) is in the game's third face, ja3/SeuratPro-M.otf (0x6e0d0 flag 0x800000 -> 0xbdc2c code 0x18 -> font 2; N2-21),
    set proportionally as the story text is. */
@@ -219,7 +219,16 @@ html, body { margin: 0; height: 100%; background: #000; overflow: hidden; }
 .keyslot { padding: 0; font-size: 22px; font-weight: 600; letter-spacing: 1px; color: #fff; border: 1px solid rgba(232, 241, 251, .7); border-radius: 6px; background: rgba(30, 60, 120, .55); cursor: pointer; outline: none; }
 .keyslot.none { color: rgba(232, 241, 251, .45); border-color: rgba(232, 241, 251, .3); }
 .keyslot.sel { background: rgba(70, 150, 240, .85); border-color: #bff; box-shadow: 0 0 10px rgba(120, 220, 255, .9); color: #fff; }
+/* an option taken (the config's language): lit without the cursor's glow */
+.keyslot.on { background: rgba(42, 104, 190, .8); border-color: #9fd8ff; color: #fff; }
 .keyslot.wait { background: rgba(120, 235, 255, .95); border-color: #fff; color: #0b3a66; box-shadow: 0 0 14px rgba(150, 245, 255, 1); }
+/* the text size's linear slider (ui.js buildOptionRows): a rail and its lit part, the knob, and the percent beside it */
+.keyslider { position: absolute; cursor: pointer; touch-action: none; }
+.keyslider-rail { position: absolute; left: 0; right: 0; top: 17px; height: 8px; border-radius: 4px; background: rgba(6, 16, 34, .78); box-shadow: inset 0 0 0 1px rgba(140, 190, 240, .4); pointer-events: none; }
+.keyslider-fill { position: absolute; top: 17px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, rgba(80, 160, 240, .85), rgba(150, 225, 255, .95)); box-shadow: 0 0 8px rgba(110, 200, 255, .55); pointer-events: none; }
+.keyslider-knob { position: absolute; top: 6px; width: 30px; height: 30px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #fff, #c9e9ff 45%, #4f93d4 100%); box-shadow: 0 1px 6px rgba(0, 0, 0, .65), 0 0 10px rgba(120, 200, 255, .5); pointer-events: none; }
+.keyslider.sel .keyslider-knob { box-shadow: 0 0 0 2px #bff, 0 0 16px rgba(140, 230, 255, .95); }
+.keyslider-val { position: absolute; text-align: right; font: 600 26px var(--gallery-font), system-ui, sans-serif; letter-spacing: 1px; color: #eaf7ff; text-shadow: 0 1px 3px rgba(0, 0, 0, .7); pointer-events: none; }
 .confnum { position: absolute; text-align: right; font: 32px Georgia, "Gelasio Bundled", serif; letter-spacing: 3px; color: #fff; pointer-events: none; }
 /* (the samples at the size of the page's other words: confart.js CONF_TEXT.size) */
 .confsample { position: absolute; left: 756px; font: 28px var(--story-font); color: #fff; pointer-events: none; line-height: 64px; }
@@ -398,6 +407,12 @@ div.fc-node { pointer-events: none; cursor: default; }
 .hm-tall { display: none; }   /* (the opening page's parts for a phone held upright: touch.css html.upright) */
 .wl-text .wl-rows.hm-rows { grid-template-columns: max-content 1fr; gap: 14px 44px; }
 .hm-press { display: block; width: 472px; height: 88px; margin: 64px auto 24px; padding: 0; border: 0; cursor: pointer; background: url("/assets/ui/TITLE_PARTS_JA/press_start.webp") 0 0 / 100% 100% no-repeat; }
+/* PLAY ONLINE's language, before the game starts (home.js): the game's own words, lit for the one in use */
+.hm-lang { display: flex; align-items: center; gap: 20px; margin: 0 0 36px; }
+.hm-lang-name { font: 400 30px/44px var(--story-font); color: #bfeeff; text-shadow: 0 0 10px rgba(110, 195, 255, .8), 0 1px 3px rgba(0, 0, 0, .85); }
+.hm-lang-btn { min-width: 154px; height: 56px; padding: 0 28px; border: 1px solid rgba(232, 241, 251, .55); border-radius: 8px; background: rgba(16, 40, 84, .55); color: #e8f1fb; font: 400 30px/54px "PT Sans Narrow", "Ubuntu Condensed", "Arial Narrow", "PT Sans Narrow Bundled", "Segoe UI", "Helvetica Neue", Arial, sans-serif; cursor: pointer; }
+.hm-lang-btn:hover { border-color: #bfeeff; text-shadow: 0 0 10px rgba(112, 255, 255, .9); }
+.hm-lang-btn.on { background: rgba(70, 150, 240, .85); border-color: #bff; box-shadow: 0 0 14px rgba(120, 220, 255, .8); color: #fff; }
 .hm-notice { margin: 0 0 40px; padding: 26px 40px 10px; background: url("/assets/ui/MENU_PARTS_JA/underline.webp") 0 0 / 100% 16px no-repeat, url("/assets/ui/MENU_PARTS_JA/underline.webp") 0 100% / 100% 16px no-repeat, rgba(0, 12, 26, .55); }
 .wl-text .hm-notice h3 { margin: 6px 0 14px; font-size: 44px; line-height: 56px; color: #fff; text-align: center; text-shadow: 0 0 5px rgba(112, 255, 255, .95), 0 0 14px rgba(112, 255, 255, .8), 0 0 28px rgba(64, 200, 255, .55), 0 1px 3px rgba(0, 0, 0, .85); }
 .wl-text .hm-notice-off { margin: 0 0 14px; text-align: center; color: #ffd27a; text-shadow: 0 0 9px rgba(255, 170, 60, .7), 0 1px 3px rgba(0, 0, 0, .85); }

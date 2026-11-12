@@ -1,4 +1,5 @@
 // textbox.js - dialogue shown a line at a time over the picture, on a full page that clears when the page ends.
+import { uiUrl } from "./lang.js";
 const el = () => document.getElementById("text");
 const panel = () => document.getElementById("panel");
 // Italics: U+E000 plus the ASCII code (the game font's slanted letters at U+E021-E07E). Written as escapes: the raw
@@ -667,13 +668,13 @@ export class TextBox {
     if (this.balloon) document.fonts?.load?.('42px "SeuratPro"');   // the balloon's face (N2-21), fetched before its first letter is typed
     if (!this.balloon) {
       const file = (w.style >= 0 && w.style <= 2 && st?.[0]) || "txtwindow01-1920";
-      p.style.background = `url("/assets/ui/DISP_PARTS_JA/${file}.webp") 0 0 / 100% 100% no-repeat`;
+      p.style.background = `url("${uiUrl(`DISP_PARTS_JA/${file}`)}") 0 0 / 100% 100% no-repeat`;
       box.style.left = box.style.width = box.style.top = "";
       box.classList.remove("balloon");
     } else {
       const [file, x, y, tx, ty, width] = st;
       const ox = off("x", w.x), oy = off("y", w.y);
-      p.style.background = `url("/assets/ui/DISP_PARTS_JA/${file}.webp") ${(x + ox) * 1.5}px ${(y + oy) * 1.5}px no-repeat`;
+      p.style.background = `url("${uiUrl(`DISP_PARTS_JA/${file}`)}") ${(x + ox) * 1.5}px ${(y + oy) * 1.5}px no-repeat`;
       // the table's text origin in stage pixels, less what the game's cells put above and left of the port's line box (measured on native frames, styles 3 and 5)
       box.style.left = `${(x + tx + ox) * 1.5 - 3}px`;
       box.style.top = `${(y + ty + oy) * 1.5 - 11}px`;
@@ -686,7 +687,7 @@ export class TextBox {
     if (st2 && st2[0] && w.style2 >= 3) {
       if (!p2) { p2 = document.createElement("div"); p2.id = "panel2"; p.after(p2); }
       const [file, x, y] = st2;
-      p2.style.background = `url("/assets/ui/DISP_PARTS_JA/${file}.webp") ${(x + off("x", w.x2)) * 1.5}px ${(y + off("y", w.y2)) * 1.5}px no-repeat`;
+      p2.style.background = `url("${uiUrl(`DISP_PARTS_JA/${file}`)}") ${(x + off("x", w.x2)) * 1.5}px ${(y + off("y", w.y2)) * 1.5}px no-repeat`;
       p2.style.display = "";
     } else if (p2) p2.style.display = "none";
     this.render();

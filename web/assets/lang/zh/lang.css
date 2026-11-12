@@ -1,0 +1,26 @@
+/* lang.css - the Chinese pack's own styles. Loaded by lang.js when the pack is chosen; the port's stylesheet is left
+   as it is, so without this pack the game is the English one. */
+
+/* The patch's story faces (ja/TT_TsukuMin-D.ttf and ja2/TT_TsukuGo-D.ttf): the game's own face, modified for simplified
+   Chinese, and its fallback. TsukuMin has the game's look; TsukuGo fills the few characters TsukuMin leaves out. */
+@font-face { font-family: "TsukuMin CN"; src: url("fonts/TsukuMin-CN.ttf") format("truetype"); font-display: swap; }
+@font-face { font-family: "TsukuGo CN"; src: url("fonts/TsukuGo-CN.ttf") format("truetype"); font-display: swap; }
+
+/* The story, the choices and the small samples, in the pack's face; the Latin stack behind it is the port's own. */
+:root { --story-font: "TsukuMin CN", "TsukuGo CN", Georgia, "Times New Roman", "Gelasio Bundled", serif; }
+
+/* A chapter's name is Chinese, set in SimSun (宋体): upright (the port sets the English names in a chancery italic).
+   The pack's faces stand in where the system has no SimSun. */
+.chapter-name { font-family: "SimSun", "宋体", "TsukuMin CN", "TsukuGo CN", serif; font-style: normal; }
+/* The condensed Latin faces of the save rows and the flowchart have no Chinese: give those names SimSun too. */
+.slot-chapter, .fc-chapter { font-family: "SimSun", "宋体", "TsukuMin CN", "TsukuGo CN", serif; }
+/* The flowchart preview's title is a chapter's name (SimSun); its note stays in the pack's face (style.css sets it in
+   --flow-font, a Latin sans). */
+.fc-preview-title { font-family: "SimSun", "宋体", "TsukuMin CN", "TsukuGo CN", serif; }
+.fc-preview-note { font-family: "TsukuGo CN", "TsukuMin CN", "Microsoft YaHei", sans-serif; }
+.slot-chapter.alone { font-size: 27px; }
+/* The title's prompt is one of the pack's pictures (TITLE_PARTS_JA/press_start, written here in Chinese). */
+.hm-press { background-image: url("ui/TITLE_PARTS_JA/press_start.webp"); }
+/* The engine's notices (Auto Save, Quick Save, Auto) come from style.css's own url: the pack's copy has the words
+   in Chinese. The cell offsets main.js sets keep working on the same atlas layout. */
+#popup { background-image: url("ui/DISP_PARTS_JA/popup_ja.webp"); }

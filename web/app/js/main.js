@@ -16,6 +16,7 @@ import { openHome, homeDue } from "./home.js";
 import { Preloader, RANK, movieUrl } from "./preload.js";
 import { REWIND_FIXED, ROUTE_FLAGS, fvar } from "./flowchart-model.js";
 import { CLICK_MARK, STORY_MOVIES, TITLE_MOVIE_LOOP, movieLook, movieQuestion, nextTitleStage, titleMusic as titleTrack, titleVariant } from "./uifx.js";
+import { t } from "./lang.js";
 
 const $ = (id) => document.getElementById(id);
 const stage = $("stage");
@@ -115,10 +116,20 @@ function popup(kind) {
 // 15 ms a letter, auto 3000 / 2200 ms, voices on and stopped by input, no whole-text display, read scenes not skipped
 // and no confirmation for it (+0x60 = 0), fast forward "Read" (+0x1e = 1: 0x40ed0 and 0x77790 stop it at unread
 // text), letters fading in and earlier lines fading out (+0x61 = +0x62 = 0).
+// textScale: the story text's size, a factor on the game's own (42 px on a 77.5 px row), a linear 50-150 % on the
+// Controls page.
 const DEFAULTS = { textSpeed: 35, readSpeed: 15, autoPage: 3000, autoClick: 2200, skipRead: false, voiceOn: true, voiceStop: true,
-  wholeUnread: false, wholeRead: false, skipConfirm: false, fastForward: "read", fadeUnread: true, fadeRead: true };
+  wholeUnread: false, wholeRead: false, skipConfirm: false, fastForward: "read", fadeUnread: true, fadeRead: true, textScale: 1 };
 let settings = { ...DEFAULTS };
 try { Object.assign(settings, JSON.parse(localStorage.getItem("tsuki.settings") || "{}")); } catch { /* defaults */ }
+// The story's face and row pitch (style.css --story-size / --story-line): the window and the log lay themselves out
+// from the computed pitch, so a new size needs nothing else.
+function applyTextSize() {
+  if (typeof document === "undefined") return;
+  const s = Math.min(1.5, Math.max(0.5, Number(settings.textScale) || 1));
+  document.documentElement.style.setProperty("--story-size", `${(42 * s).toFixed(2)}px`);
+  document.documentElement.style.setProperty("--story-line", `${(77.5 * s).toFixed(2)}px`);
+}
 function setSetting(k, v) {
   settings[k] = v;
   try { localStorage.setItem("tsuki.settings", JSON.stringify(settings)); } catch { /* not saved */ }
@@ -137,6 +148,7 @@ function setSetting(k, v) {
   vm.voiceOn = settings.voiceOn;
   vm.voiceStop = settings.voiceStop;
   audio.setVoiceSwitch(settings.voiceOn);   // voiced effects playing follow the switch (0x9b7f0, type-2 channels)
+  applyTextSize();
 }
 
 // The marks' cell counter (0x572b60) is one for all of them: 0x38ec0 adds the frames while a mark is drawn and takes
@@ -242,7 +254,7 @@ function playMovie(name, opts = {}) {
     const look = opts.story ? movieLook(opts.number) : null;
     const rule = opts.story ? STORY_MOVIES[opts.number] : null;
     // the gallery lists a movie only once it has been seen, the prologue aside, which asks nothing there
-    movieAsk = movieQuestion(opts.number, !!opts.gallery || !!opts.seen || (!!rule && !!((vm.getVar("G005") >> rule[0]) & 1)));
+    movieAsk = t(movieQuestion(opts.number, !!opts.gallery || !!opts.seen || (!!rule && !!((vm.getVar("G005") >> rule[0]) & 1))));
     const cover = look ? movieCover() : null;
     let alpha = look && look.fadeIn ? 0 : 1, frames = 0, passing = false, music = false, chimed = false, last = null, ended = false;
     if (cover) { cover.style.background = look.white ? "#fff" : "#000"; cover.style.display = "block"; cover.style.opacity = String(1 - alpha); }

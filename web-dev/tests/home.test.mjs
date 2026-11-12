@@ -59,9 +59,9 @@ test("it opens with no tab chosen and no plate lit, so a stray tap starts nothin
   assert.match(home, /show\(NONE\);\n    ui\.sel = NONE;/);
   assert.equal(NONE, -1);
   assert.match(NONE_LINE, /ABOUT, GITHUB, DOWNLOAD, or PLAY ONLINE/);
-  assert.match(home, /if \(tab === PLAY && !e\.target\.closest\("a"\)\) start\(\);/, "taps start the game only on PLAY ONLINE's page");
+  assert.match(home, /if \(tab === PLAY && !e\.target\.closest\("a"\) && !e\.target\.closest\("\.hm-lang"\)\) start\(\);/, "taps start the game only on PLAY ONLINE's page, the language's buttons aside");
   assert.match(home, /if \(i === PLAY && tab === PLAY\) \{ start\(\); return; \}/);
-  assert.match(home, /list\.addEventListener\("click", \(e\) => \{ if \(tab === PLAY && !e\.target\.closest\("a"\)\) start\(\); \}\);/);
+  assert.match(home, /list\.addEventListener\("click", \(e\) => \{ if \(tab === PLAY && !e\.target\.closest\("a"\) && !e\.target\.closest\("\.hm-lang"\)\) start\(\); \}\);/);
   assert.match(home, /if \(leaving \|\| tab !== PLAY\) return;/, "nothing else starts it");
   assert.ok(main.indexOf("preload.startup(") < main.indexOf("await openHome(ui"), "the game loads while the page is open");
 });
@@ -93,7 +93,7 @@ test("on a phone held upright the opening page has a layout of its own and no ro
 test("PLAY ONLINE opens on the hardware acceleration notice, with each browser's setting, only where acceleration is off or can't be told to be on", async () => {
   const { TABS, PLAY, GPU_NOTICE, SOFTWARE_GL, HIDDEN_GL } = await import("../../web/app/js/home.js");
   const h = source("js/home.js");
-  assert.deepEqual(TABS[PLAY].sections[0].blocks[0], ["gpu"]);
+  assert.deepEqual(TABS[PLAY].sections[0].blocks.slice(0, 2), [["lang"], ["gpu"]], "the language first, then the notice");
   assert.match(GPU_NOTICE.head, /hardware acceleration/);
   assert.deepEqual(GPU_NOTICE.rows.map((r) => r[0]), ["Chrome", "Edge", "Firefox"]);
   for (const n of ["ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (LLVM 10.0.0) (0x0000C0DE)), SwiftShader driver)", "llvmpipe (LLVM 15.0.7, 256 bits)",

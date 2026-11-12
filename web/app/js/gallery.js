@@ -6,9 +6,10 @@ import { LAYOUT as END, endingList } from "./endings.js";
 import { ButtonState, EASE, GALLERY_OPEN, MenuBgFade, Tween, fadeIn, fadeOut, wheelPixels } from "./uifx.js";
 import { cgLists, musicUnlocked } from "./unlocks.js";
 import { TOUCH, pinch } from "./touch.js";
+import { imageUrl, uiUrl } from "./lang.js";
 
 const P = "GALLERY_PARTS_JA";
-const url = (pack, name) => `/assets/ui/${pack}/${name}.webp`;
+const url = (pack, name) => uiUrl(`${pack}/${name}`);
 const ITEMS = ["cg", "music", "flowchart", "movie", "ending", "title"];
 const TITLES = { cg: "cg_title", music: "music_title", movie: "movie_title", ending: "ending_title" };
 // Native 0xAF78: a 6-column grid at x 392 + 240c, y 109 + 139r; thumbnails are atlas cells (154 x 87) at 1.5x.
@@ -874,7 +875,7 @@ export function openGallery(ui, vm, env, start = session.section || "cg", opts =
     box.append(band);
     ui.helpBar(band, ["Back", "Picture", "Zoom", "Fill", "Reset"]);
     const guide = new GuideFx();
-    const rules = [26, 27].map((n) => { const i = new Image(); i.src = `/assets/img/RULE_${n}.avif`; return i; });
+    const rules = [26, 27].map((n) => { const i = new Image(); i.src = imageUrl(`RULE_${n}`); return i; });
     let k = first.flat, view = null, shown = null, phase = "open", tw = fadeIn(), wipe = null, hold = 0, loaded = false;
     const held = new Set();
     const onKeyUp = (e) => held.delete(e.key);
@@ -922,7 +923,7 @@ export function openGallery(ui, vm, env, start = session.section || "cg", opts =
         if (then) then();
       };
       img.onerror = () => { if (shown === p && then) then(); };
-      img.src = `/assets/img/${v.image}.avif`;
+      img.src = imageUrl(v.image);
     };
     // The picture as it is now, for the wipe: the backdrop and the picture as placed. The hint band is not in it: it lies
     // over the wipe and stands still through a change (the game's capture, 0xa4610, took the band too, and its new band

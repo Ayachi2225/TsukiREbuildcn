@@ -5,6 +5,9 @@
 import { streamOf } from "./audio.js";
 import { grainSample } from "./screenfx.js";
 import { titleMusic, titleVariant } from "./uifx.js";
+import { movieUrl, uiUrl } from "./lang.js";
+
+export { movieUrl };   // (main.js reads the movies' addresses from here too)
 
 // What a job is for, most pressing first: the screen that comes next; the story's own screen; the menus over it; the gallery.
 export const RANK = { next: 0, story: 1, menus: 2, extras: 3 };
@@ -51,7 +54,6 @@ export const GL_ART = {
 const FONTS = ['40px "SeuratPro"', "16px Inter"];
 const SYS_SOUNDS = 9;
 
-export const movieUrl = (name) => `/assets/movie/${name}.mp4`;   // (main.js reads the movies' addresses from here too)
 const ruleName = (n) => `RULE_${String(n).padStart(2, "0")}`;
 function unload(v) {
   try { v.removeAttribute("src"); v.load(); } catch { /* gone already */ }
@@ -134,7 +136,7 @@ export class Preloader {
     return this.add(rank, `art ${path}`, () => {
       const img = new this.Picture();
       this.kept.set(path, img);
-      img.src = `/assets/ui/${path}.webp`;
+      img.src = uiUrl(path);
       return img.decode ? img.decode() : null;
     });
   }

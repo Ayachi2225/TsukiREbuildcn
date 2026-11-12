@@ -9,6 +9,7 @@ import { LogoDust, LogoShards, MenuCursor, MENU_COLUMN, MENU_FADE, drawTitlePart
   SampleFx, NOTICE, NoticeFx, voiceScrollMax, wheelPixels, hitBoxPixels, STORY_HIT, SYSTEM_HIT } from "./uifx.js";
 import { ACTIONS, MENU_KEYS, MOUSE, SLOTS, canBind, keyLabel, keyName } from "./keys.js";
 import { chapterNamed, menuChapter } from "./chapters.js";
+import { LANG, setLang, t, uiUrl } from "./lang.js";
 import { TOUCH, TOUCH_CONTROLS, TOUCH_HINTS, barPlace } from "./touch.js";
 const PHASES = {
   // script prefix -> [column, row] in system_phasetitle_ja. The route of each is inferred from the script names.
@@ -32,7 +33,7 @@ export const PHASE_NAMES = [
   ["Vermillion Vestiges II", "The Moon's Surface", "Mirage", "Stone of Eternity", "Moon Princess", "Rainbow in the Night", "Daylight Blue", "Prologue", "Infernal River of Blood II"],
 ];
 
-const url = (pack, name) => `/assets/ui/${pack}/${name}.webp`;
+const url = (pack, name) => uiUrl(`${pack}/${name}`);
 
 // A piece of an atlas at a place on the 1920 x 1080 stage.
 export function sprite(pack, name, x, y, w, h, sx = 0, sy = 0, cls = "") {
@@ -113,12 +114,16 @@ function noteLabel(text) {
   try {
     const el = document.createElement("canvas"), probe = el.getContext("2d");
     const ink = (m) => (m.actualBoundingBoxLeft || 0) + (m.actualBoundingBoxRight || m.width);
-    probe.font = `${T.weight} 100px ${T.font}`;
-    const size = (T.cap / (probe.measureText("N").actualBoundingBoxAscent || 72)) * 100;
-    const face = `${T.weight} ${size}px ${T.font}`;
+    // A translated label in Chinese is set in a CJK face at the height of the game's capitals; the Latin measures (squeeze
+    // to a fixed width, strokes pared to 2 px) are the game's own lettering and do not apply to it.
+    const cjk = /[㐀-鿿]/.test(text);
+    const font = cjk ? '"TsukuGo CN", "TsukuMin CN", "Microsoft YaHei", sans-serif' : T.font;
+    probe.font = `${T.weight} 100px ${font}`;
+    const size = cjk ? T.cap / 0.82 : (T.cap / (probe.measureText("N").actualBoundingBoxAscent || 72)) * 100;
+    const face = `${T.weight} ${size}px ${font}`;
     probe.font = face;
-    const squeeze = Math.max(0.7, Math.min(1.5, T.width / (ink(probe.measureText(T.word)) || T.width)));
-    const pare = Math.max(0, Math.min(1.2, ink(probe.measureText("I")) * squeeze - T.stem)) / squeeze;
+    const squeeze = cjk ? 1 : Math.max(0.7, Math.min(1.5, T.width / (ink(probe.measureText(T.word)) || T.width)));
+    const pare = cjk ? 0 : Math.max(0, Math.min(1.2, ink(probe.measureText("I")) * squeeze - T.stem)) / squeeze;
     const width = Math.ceil(probe.measureText(text).width * squeeze) + 2 * pad, height = T.base + 8;
     el.width = width * K; el.height = height * K;
     el.style.width = `${width}px`; el.style.height = `${height}px`;
@@ -233,18 +238,22 @@ function drawQuickBar(img, defs, B) {
       if (d.art !== undefined) return;
       const word = document.createElement("canvas");
       word.width = W; word.height = H;
-      const w = word.getContext("2d"), label = d.label.toUpperCase();
+      // A plate's word is translated, except where the caller says its own art must keep it (the opening page's four).
+      const w = word.getContext("2d"), label = (d.raw ? String(d.label) : t(d.label)).toUpperCase();
+      const cjk = /[㐀-鿿]/.test(label);
       w.translate(W / 2, T.base);
-      w.scale(squeeze, 1);
-      w.font = `400 ${T.size}px ${T.font}`;
+      w.scale(cjk ? 1 : squeeze, 1);
+      w.font = cjk ? `400 ${T.size}px "TsukuGo CN", "TsukuMin CN", "Microsoft YaHei", sans-serif` : `400 ${T.size}px ${T.font}`;
       w.textAlign = "center";
       w.textBaseline = "alphabetic";
       w.fillStyle = fill;
       w.fillText(label, 0, 0);
-      w.globalCompositeOperation = "destination-out";
-      w.lineJoin = "round";
-      w.lineWidth = T.pare;
-      w.strokeText(label, 0, 0);
+      if (!cjk) {
+        w.globalCompositeOperation = "destination-out";
+        w.lineJoin = "round";
+        w.lineWidth = T.pare;
+        w.strokeText(label, 0, 0);
+      }
       g.save();
       g.beginPath();
       g.rect(col * W, row * H, W, H);
@@ -670,15 +679,15 @@ export class UI {
   helpBar(page, labels) {
     const bar = document.createElement("div");
     bar.className = "helpbar";
-    bar.setAttribute("aria-label", labels.join(", "));
+    bar.setAttribute("aria-label", labels.map((l) => t(l)).join(", "));
     for (const label of labels) {
       const hint = document.createElement("span");
       hint.className = "hint";
       // on a touch device, what a finger does instead (touch.js TOUCH_HINTS); an entry with nothing to say is left out
       const keys = this.touch ? TOUCH_HINTS[label] : label === "Replay voice" ? [this.keys?.label("voice") || "V", ...HINTS[label].slice(1)] : HINTS[label] || [];
       if (!keys) continue;
-      for (const key of keys) hint.append(Object.assign(document.createElement("kbd"), { textContent: key }));
-      hint.append(Object.assign(document.createElement("span"), { className: "hint-label", textContent: label }));
+      for (const key of keys) hint.append(Object.assign(document.createElement("kbd"), { textContent: t(key) }));
+      hint.append(Object.assign(document.createElement("span"), { className: "hint-label", textContent: t(label) }));
       bar.append(hint);
     }
     page.appendChild(bar);
@@ -1215,7 +1224,7 @@ export class UI {
     page.append(box);
     // "Audio Track" over it, above the band's line, as "Note." stands over the scene name: its right end set in from the
     // title's by as much, in that label's lettering (noteLabel)
-    const label = noteLabel(N.label);
+    const label = noteLabel(t(N.label));
     if (!label) return;
     label.el.className = "np-label";
     label.el.setAttribute("aria-hidden", "true");
@@ -1304,7 +1313,7 @@ export class UI {
         }
       };
       if (refused(label)) { b.style.opacity = ".3"; b.setAttribute("aria-disabled", "true"); }
-      b.setAttribute("aria-label", label);
+      b.setAttribute("aria-label", t(label));
       btns.push(b);
       const choose = () => {
         if (active === label && this.screenFocus) { this.screenFocus(); return; }
@@ -1755,7 +1764,7 @@ export class UI {
           r.append(t);
           titleBox = t;
         }
-      } else r.append(Object.assign(document.createElement("div"), { className: "slotempty", textContent: "Empty" }));
+      } else r.append(Object.assign(document.createElement("div"), { className: "slotempty", textContent: t("Empty") }));
       if (auto) r.append(sprite("SAVE_PARTS_JA", "saveauto", 692, 125, 192, 32, 0, 0, "slotauto"));
       else if (label) r.append(Object.assign(document.createElement("div"), { className: "slotlabel", textContent: label }));
       const take = () => {   // the row takes the cursor back from the column
@@ -1769,7 +1778,7 @@ export class UI {
       // a long chapter name is set smaller, so that it ends before the row's own name at the right (No. 001, AUTO SAVE)
       if (title) for (let size = SLOT_TITLE.size; size > SLOT_TITLE.least && (titleBox.offsetWidth || 0) > SLOT_TITLE.room; ) title.style.fontSize = `${size -= 1}px`;
     };
-    const slotName = (i) => `No. ${String(i + 1).padStart(3, "0")}`;
+    const slotName = (i) => `${t("No.")} ${String(i + 1).padStart(3, "0")}`;
     const entries = [];   // { rec, kind: "slot" | "quick" | "auto", slot }
     if (mode === "save") for (let i = 0; i < 100; i++) entries.push({ rec: saves[i] || null, kind: "slot", slot: i });
     else {
@@ -1823,7 +1832,7 @@ export class UI {
         if (rec) this.dialog(this.message(2, "Overwrite?"), write, null, { startNo: true });
         else write();
       };
-      row(rec, act, kind === "slot" ? { label: slotName(i) } : kind === "quick" ? { label: "Quick save" } : { auto: true });
+      row(rec, act, kind === "slot" ? { label: slotName(i) } : kind === "quick" ? { label: t("Quick save") } : { auto: true });
     }
     if (!entries.length) {
       const none = document.createElement("div");
@@ -2288,7 +2297,7 @@ export class UI {
     const b = this.confButton(w.id, w.x, w.y);
     b.isOn = !!on;
     b.tick(0);
-    if (label) b.setAttribute("aria-label", label);
+    if (label) b.setAttribute("aria-label", t(label));
     b.setAttribute("aria-pressed", String(b.isOn));
     this.confWidget(body, b, row, w.col, () => { b.isOn = !b.isOn; b.setAttribute("aria-pressed", String(b.isOn)); set(b.isOn); });
     return b;
@@ -2297,7 +2306,7 @@ export class UI {
   // Test (kind 1, or the SE Test, widget 0x55): plays a sample, with no sound of its own.
   testButton(body, row, w, play, label) {
     const b = this.confButton(w.id, w.x, w.y);
-    b.setAttribute("aria-label", label);
+    b.setAttribute("aria-label", t(label));
     this.confWidget(body, b, row, w.col, play, { sound: null });
     return b;
   }
@@ -2655,7 +2664,9 @@ export class UI {
       }
       const it = this.items[this.sel];
       if (dir) {
-        // A held on the slider: Left / Right step it (0x2b930 kind 4 with A held)
+        // A held on the slider: Left / Right step it (0x2b930 kind 4 with A held). A slider that wants no held key
+        // (the port's text size) steps on its own.
+        if (it?.el.arrowStep && (dir === "left" || dir === "right")) { it.el.step(dir === "left" ? -1 : 1); return true; }
         if (C.held && it?.el.kind === 4 && (dir === "left" || dir === "right")) { it.el.step(dir === "left" ? -1 : 1); return true; }
         go(configMove(C.cols, C.cur, dir, { inGame: !fromTitle, colOf: C.colOf, tab: C.tab }));
         return true;
@@ -2779,9 +2790,117 @@ export class UI {
   // (The game's page was a picture of the controller, conf_manual0_ja.) A click or Enter on a key waits for the next
   // key pressed and gives it to that action, taking it from any other; Esc leaves it as it was, Backspace or Delete
   // empties it. "Reset to defaults" puts the game's settings and these keys back.
+  // The port's own rows above the Controls page's keyboard (or touch) rows: the language the pack is read in and the
+  // story text's size. The language's buttons stand where the key slots do, and the one taken stays lit. The size is a
+  // linear slider 50-150 %: its knob follows a drag on the bar (or a press anywhere along it), the arrows step it 5 %
+  // while it is the cursor's, and the minus and plus buttons beside it step it by a press. Grid rows 0 and 1.
+  buildOptionRows(page, top) {
+    const L = KEYPAGE, S = this.env.settings;
+    const div = (cls, text, x, y, w, h) => {
+      const d = document.createElement("div");
+      d.className = cls;
+      if (text !== undefined) d.textContent = text;
+      d.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px;line-height:${h}px;`;
+      return d;
+    };
+    const rowY = (row) => top + L.head + row * L.row;
+    page.under.append(div("keyhead", t("Text & Language"), L.x, top, L.w, L.head));
+    page.under.append(div("keyrow", t("Language"), L.x, rowY(0), L.w, L.row));
+    page.under.append(div("keyrow", t("Text size"), L.x, rowY(1), L.w, L.row));
+    const opts = [];
+    const refresh = () => {
+      for (const o of opts) {
+        const lit = !!o.on();
+        o.b.classList.toggle("on", lit);
+        o.b.setAttribute("aria-pressed", String(lit));
+      }
+    };
+    const option = (row, col, x, w, label, on, pick) => {
+      const b = document.createElement("button");
+      b.className = "keyslot";
+      b.style.cssText = `left:${x}px;top:${rowY(row) + (L.row - L.slot[1]) / 2}px;width:${w}px;height:${L.slot[1]}px;`;
+      b.textContent = label;
+      b.setSelected = (sel) => b.classList.toggle("sel", sel);
+      b.placeY = rowY(row);
+      opts.push({ b, on });
+      this.confWidget(page.widgets, b, row, col, () => { pick(); refresh(); }, { sound: 1 });
+      return b;
+    };
+    [["en", "English"], ["zh", "中文"]].forEach(([code, label], k) => {
+      option(0, k, L.slotX[k], L.slot[0], label, () => LANG === code, () => {
+        if (LANG !== code) this.dialog(t("The game will restart to change the language. Continue?"), () => setLang(code), null, { startNo: true });
+      });
+    });
+    // The text size, as a percentage of the game's own (100 %): 50-150, whole percents.
+    const SZ = { min: 50, max: 150, x: 790, w: 700, knob: 30, btn: 56 };
+    const slotTop = rowY(1) + (L.row - L.slot[1]) / 2;
+    const pct = () => Math.round(Math.min(SZ.max, Math.max(SZ.min, (Number(S.textScale) || 1) * 100)));
+    const track = document.createElement("div");
+    track.className = "keyslider";
+    track.style.cssText = `left:${SZ.x}px;top:${slotTop}px;width:${SZ.w}px;height:${L.slot[1]}px;`;
+    const fill = document.createElement("div"), knob = document.createElement("div");
+    fill.className = "keyslider-fill";
+    knob.className = "keyslider-knob";
+    const rail = document.createElement("div");
+    rail.className = "keyslider-rail";
+    track.append(rail, fill, knob);
+    const value = div("keyslider-val", "", SZ.x + SZ.w + 74, slotTop, 140, L.slot[1]);
+    const show = () => {
+      const u = (pct() - SZ.min) / (SZ.max - SZ.min), inner = SZ.w - SZ.knob;
+      knob.style.left = `${(u * inner).toFixed(1)}px`;
+      fill.style.left = `${SZ.knob / 2}px`;
+      fill.style.width = `${(u * inner).toFixed(1)}px`;
+      value.textContent = `${pct()}%`;
+    };
+    const set = (v) => {
+      const p = Math.min(SZ.max, Math.max(SZ.min, Math.round(v)));
+      if (p !== pct()) this.env.setSetting("textScale", p / 100);
+      show();
+    };
+    page.under.append(value);
+    const button = (x, label, step) => {
+      const b = document.createElement("button");
+      b.className = "keyslot";
+      b.textContent = label;
+      b.style.cssText = `left:${x}px;top:${slotTop}px;width:${SZ.btn}px;height:${L.slot[1]}px;`;
+      b.addEventListener("pointerdown", (e) => e.stopPropagation());
+      b.addEventListener("click", (e) => { e.stopPropagation(); this.sound(1); set(pct() + step); });
+      page.under.append(b);
+      return b;
+    };
+    button(SZ.x - SZ.btn - 16, "−", -5);
+    button(SZ.x + SZ.w + 10, "+", 5);
+    let drag = false;
+    const fromPointer = (e) => {
+      const r = track.getBoundingClientRect();
+      const u = Math.min(1, Math.max(0, (e.clientX - r.left) / (r.width || 1)));
+      set(SZ.min + u * (SZ.max - SZ.min));
+    };
+    track.addEventListener("pointerdown", (e) => {
+      if (e.button !== 0) return;
+      e.stopPropagation();
+      drag = true;
+      track.setPointerCapture?.(e.pointerId);
+      fromPointer(e);
+    });
+    track.addEventListener("pointermove", (e) => { if (drag) fromPointer(e); });
+    const end = () => { drag = false; };
+    track.addEventListener("pointerup", end);
+    track.addEventListener("pointercancel", end);
+    // the cursor's arrows step it by 5 % (the config's own sliders ask for Enter held; a percentage wants no such step)
+    track.arrowStep = true;
+    track.step = (d) => set(pct() + d * 5);
+    track.setSelected = (sel) => track.classList.toggle("sel", sel);
+    track.placeY = rowY(1);
+    this.confWidget(page.widgets, track, 1, 0, () => {}, { sound: null });
+    show();
+    refresh();
+    return L.head + 2 * L.row + L.gap;
+  }
+
   buildControlsPage(pageBox) {
     const C = this.conf, M = this.confMem, K = this.keys;
-    const L = KEYPAGE, rowsY = L.top + L.head;
+    const L = KEYPAGE, top = L.top + L.head + 2 * L.row + L.gap, rowsY = top + L.head;
     const menuTop = rowsY + ACTIONS.length * L.row + L.gap, fixedRows = Math.max(MENU_KEYS.length, MOUSE.length);
     const height = menuTop + L.head + fixedRows * L.row + L.foot - CONFIG.clip[1];
     const page = this.configScroll(pageBox, Math.max(0, height - CONFIG.clip[3]), M?.scroll[2] ?? 0);
@@ -2790,8 +2909,9 @@ export class UI {
     const head = (text, x, y, w) => page.under.append(div("keyhead", text, `left:${x}px;top:${y}px;width:${w}px;height:${L.head}px;line-height:${L.head}px;`));
     const line = (text, x, y, w) => page.under.append(div("keyrow", text, `left:${x}px;top:${y}px;width:${w}px;height:${L.row}px;line-height:${L.row}px;`));
     const cap = (text, x, y) => page.over.append(div("keycap", text, `left:${x}px;top:${y + (L.row - L.slot[1]) / 2}px;height:${L.slot[1]}px;line-height:${L.slot[1]}px;`));
-    head("Keyboard", L.x, L.top, L.w);
-    page.under.append(div("keynote", "Click a key to change it.  Esc cancels, Backspace clears.", `left:${L.x}px;top:${L.top}px;width:${L.w - 24}px;height:${L.head}px;line-height:${L.head}px;`));
+    this.buildOptionRows(page, L.top);
+    head(t("Keyboard"), L.x, top, L.w);
+    page.under.append(div("keynote", t("Click a key to change it.  Esc cancels, Backspace clears."), `left:${L.x}px;top:${top}px;width:${L.w - 24}px;height:${L.head}px;line-height:${L.head}px;`));
     const slots = [];
     const refresh = () => { for (const s of slots) { const k = K?.keys(s.id)[s.slot]; s.el.textContent = k ? keyLabel(k) : "—"; s.el.classList.toggle("none", !k); } };
     // The next key pressed is the slot's; a press of the mouse anywhere leaves it.
@@ -2800,7 +2920,7 @@ export class UI {
       const keep = this.keyFn;
       this.binding = true;
       s.el.classList.add("wait");
-      s.el.textContent = "Press a key";
+      s.el.textContent = t("Press a key");
       const end = (sound) => {
         this.binding = false;
         this.keyFn = keep;
@@ -2822,49 +2942,51 @@ export class UI {
     };
     ACTIONS.forEach((a, row) => {
       const y = rowsY + row * L.row;
-      line(a.label, L.x, y, L.w);
+      line(t(a.label), L.x, y, L.w);
       for (let slot = 0; slot < SLOTS; slot++) {
         const b = document.createElement("button");
         b.className = "keyslot";
         b.style.cssText = `left:${L.slotX[slot]}px;top:${y + (L.row - L.slot[1]) / 2}px;width:${L.slot[0]}px;height:${L.slot[1]}px;`;
-        b.setAttribute("aria-label", `${a.label}, key ${slot + 1}`);
+        b.setAttribute("aria-label", `${t(a.label)}, ${t("key")} ${slot + 1}`);
         b.setSelected = (on) => b.classList.toggle("sel", on);
         b.placeY = y;
         const s = { id: a.id, slot, el: b };
         slots.push(s);
-        this.confWidget(page.widgets, b, row, slot, () => bind(s), { sound: 1 });
+        this.confWidget(page.widgets, b, row + 2, slot, () => bind(s), { sound: 1 });
       }
     });
     refresh();
     // the keys that are the same on every menu, and the mouse, side by side
     const half = (L.w - L.gap) / 2, x2 = L.x + half + L.gap;
-    head("Menus", L.x, menuTop, half);
-    head("Mouse", x2, menuTop, half);
+    head(t("Menus"), L.x, menuTop, half);
+    head(t("Mouse"), x2, menuTop, half);
     MENU_KEYS.forEach(([label, keys], k) => {
       const y = menuTop + L.head + k * L.row;
-      line(label, L.x, y, half);
+      line(t(label), L.x, y, half);
       cap(keys.map(keyLabel).join(" / "), L.x + 300, y);
     });
     MOUSE.forEach(([label, what], k) => {
       const y = menuTop + L.head + k * L.row;
-      line(label, x2, y, half);
-      cap(what, x2 + 360, y);
+      line(t(label), x2, y, half);
+      cap(t(what), x2 + 360, y);
     });
     page.order();
   }
 
   // The Controls page on a touch device: what a finger does (touch.js TOUCH_CONTROLS), in the rows of the keyboard's page.
   buildTouchPage(pageBox) {
-    const C = this.conf, M = this.confMem, L = KEYPAGE, rowsY = L.top + L.head;
+    const C = this.conf, M = this.confMem, L = KEYPAGE;
+    const top = L.top + L.head + 2 * L.row + L.gap, rowsY = top + L.head;
     const height = rowsY + TOUCH_CONTROLS.length * L.row + L.foot - CONFIG.clip[1];
     const page = this.configScroll(pageBox, Math.max(0, height - TOUCH.config.height), M?.scroll[2] ?? 0);
     C.scroll = page.scroll;
     const div = (cls, text, css) => { const d = document.createElement("div"); d.className = cls; d.textContent = text; d.style.cssText = css; return d; };
-    page.under.append(div("keyhead", "Touch", `left:${L.x}px;top:${L.top}px;width:${L.w}px;height:${L.head}px;line-height:${L.head}px;`));
+    this.buildOptionRows(page, L.top);
+    page.under.append(div("keyhead", t("Touch"), `left:${L.x}px;top:${top}px;width:${L.w}px;height:${L.head}px;line-height:${L.head}px;`));
     TOUCH_CONTROLS.forEach(([label, how], k) => {
       const y = rowsY + k * L.row;
-      page.under.append(div("keyrow", label, `left:${L.x}px;top:${y}px;width:${L.w}px;height:${L.row}px;line-height:${L.row}px;`));
-      page.over.append(div("keycap", how, `left:${L.x + 520}px;top:${y + (L.row - L.slot[1]) / 2}px;height:${L.slot[1]}px;line-height:${L.slot[1]}px;`));
+      page.under.append(div("keyrow", t(label), `left:${L.x}px;top:${y}px;width:${L.w}px;height:${L.row}px;line-height:${L.row}px;`));
+      page.over.append(div("keycap", t(how), `left:${L.x + 520}px;top:${y + (L.row - L.slot[1]) / 2}px;height:${L.slot[1]}px;line-height:${L.slot[1]}px;`));
     });
     page.order();
   }
@@ -3221,11 +3343,11 @@ export class UI {
     defs.forEach((d, i) => {
       const b = document.createElement("button");
       b.className = "qbtn r1";
-      b.textContent = d.label;   // until the art is in, and where it cannot be made
-      b.setAttribute("aria-label", d.tip);
+      b.textContent = t(d.label);   // until the art is in, and where it cannot be made
+      b.setAttribute("aria-label", t(d.tip));
       const [bx, by] = TB ? barPlace(i, TB) : [x0 + i * B.pitch, B.y];
       b.style.cssText = `left:${bx}px;top:${by}px;width:${B.w}px;height:${B.h}px;`;
-      if (TB) b.append(Object.assign(document.createElement("div"), { className: "qname", textContent: TOUCH.names[d.id] || d.tip }));
+      if (TB) b.append(Object.assign(document.createElement("div"), { className: "qname", textContent: t(TOUCH.names[d.id] || d.tip) }));
       // the cell under the cursor again, added, at the arrival flash
       const lit = document.createElement("div");
       lit.className = "sp fx-add";
@@ -3323,7 +3445,7 @@ export class UI {
   // A button's caption: what it does and its key.
   panelTip(d) {
     const key = this.keys?.label(d.id);
-    return key ? `${d.tip}  [${key}]` : d.tip;
+    return key ? `${t(d.tip)}  [${key}]` : t(d.tip);
   }
 
   renderPanel() {
