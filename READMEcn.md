@@ -1,10 +1,10 @@
-# 月姬 r webdev 中文翻译
+# TsukiREbuild 中文翻译补丁
 
 本分支内置简体中文语言包（`web/assets/lang/zh/`），英文资源原样保留。默认以英文启动；在 PLAY ONLINE 页选择「中文」后，主页与游戏都切换为简体中文。
 
 简体中文剧情、系统文本和界面素材来自《月姬》简体中文汉化补丁：<https://tsukihimecn.github.io/cn/MainPost/>。
 
-> **说明**：中文翻译补丁只提供网页版，不提供桌面版（Windows、macOS、Linux）和 Android APK 的构建或下载。
+> **说明**：中文翻译补丁只提供网页版，尚未支持桌面版（Windows、macOS、Linux）和 Android APK 的构建。
 
 ## 本地部署
 
